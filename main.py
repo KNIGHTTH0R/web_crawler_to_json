@@ -6,54 +6,72 @@ import json
 from collections import OrderedDict
 from bs4 import BeautifulSoup
 
-def main():
-    url = 'http://revistaautoesporte.globo.com/rss/ultimas/feed.xml'
-    feed = feedparser.parse(url)
+class WebCrawler:
+    def __init__(self, url):
+        self.url  = url
 
-    data = {'feed': []}
-    for post in feed.entries:
-        item = OrderedDict()
-        item['title']       = post.title
-        item['link']        = post.link
-        item['description'] = parse_description(post.description)
+    def __parse_url(self):
+        return feedparser.parse(self.url)
 
-        data['feed'].append({'item': item})
+    def build_data(self):
+        feed = self.__parse_url()
 
-    print json.dumps(data, indent=4, ensure_ascii=False)
+        data = {'feed': []}
+        for post in feed.entries:
+            item = OrderedDict()
+            item['title']       = post.title
+            item['link']        = post.link
+            item['description'] = self.parse_description(post.description)
 
-    with open('data.json', 'w') as outfile:
-        json.dump(data, outfile)
+            data['feed'].append({'item': item})
 
-def parse_description(content):
-    content = content.replace('<p>\n\t&nbsp;</p>', '').replace('\n', '').replace('\t', '')
+        return data
 
-    items = []
-    parsed_html = BeautifulSoup(content, 'html.parser')
+    def dump_data(self, data):
+        return json.dumps(data, indent=4, ensure_ascii=False)
 
-    paragraphs = parsed_html.find_all('p')
-    for p in paragraphs:
-        item = OrderedDict([('type', 'text')])
-        item['content'] = p.text
-        items.append(item)
+    def data_to_file(self, data):
+        with open('data.json', 'w') as outfile:
+            json.dump(data, outfile)
 
-    images = parsed_html.find_all('img')
-    for img in images:
-        if img.parent.name == 'div':
-            item = OrderedDict([('type', 'image')])
-            item['content'] = img['src']
+    def parse_description(self, description):
+        description = description.replace('<p>\n\t&nbsp;</p>', '').replace('\n', '').replace('\t', '')
+
+        items = []
+        parsed_html = BeautifulSoup(description, 'html.parser')
+
+        paragraphs = parsed_html.find_all('p')
+        for p in paragraphs:
+            item = OrderedDict([('type', 'text')])
+            item['content'] = p.text
             items.append(item)
 
-    links = parsed_html.find_all('a')
-    links_array = []
-    for link in links:
-        if link.parent.name == 'li':
-            links_array.append(link['href'])
+        images = parsed_html.find_all('img')
+        for img in images:
+            if img.parent.name == 'div':
+                item = OrderedDict([('type', 'image')])
+                item['content'] = img['src']
+                items.append(item)
 
-    if links_array:
-        item = OrderedDict([('type', 'links')])
-        item['content'] = links_array
-        items.append(item)
+        links = parsed_html.find_all('a')
+        links_array = []
+        for link in links:
+            if link.parent.name == 'li':
+                links_array.append(link['href'])
 
-    return items
+        if links_array:
+            item = OrderedDict([('type', 'links')])
+            item['content'] = links_array
+            items.append(item)
+
+        return items
+
+def main():
+    url = 'http://revistaautoesporte.globo.com/rss/ultimas/feed.xml'
+    crawler = WebCrawler(url)
+    data = crawler.build_data()
+
+    crawler.data_to_file(data)
+    print crawler.dump_data(data)
 
 main()
