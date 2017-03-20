@@ -10,9 +10,6 @@ class WebCrawler:
     def __init__(self, url):
         self.url  = url
 
-    def __parse_url(self):
-        return feedparser.parse(self.url)
-
     def build_data(self):
         feed = self.__parse_url()
 
@@ -21,7 +18,7 @@ class WebCrawler:
             item = OrderedDict()
             item['title']       = post.title
             item['link']        = post.link
-            item['description'] = self.parse_description(post.description)
+            item['description'] = self.__parse_description(post.description)
 
             data['feed'].append({'item': item})
 
@@ -34,7 +31,10 @@ class WebCrawler:
         with open('data.json', 'w') as outfile:
             json.dump(data, outfile)
 
-    def parse_description(self, description):
+    def __parse_url(self):
+        return feedparser.parse(self.url)
+
+    def __parse_description(self, description):
         description = description.replace('<p>\n\t&nbsp;</p>', '').replace('\n', '').replace('\t', '')
 
         items = []
